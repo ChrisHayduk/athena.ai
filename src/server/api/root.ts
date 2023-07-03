@@ -1,4 +1,5 @@
 import { chatRouter } from "~/server/api/routers/chat";
+import { chromaRouter } from "~/server/api/routers/chroma";
 import { exampleRouter } from "~/server/api/routers/example";
 import { createTRPCRouter } from "~/server/api/trpc";
 
@@ -9,6 +10,7 @@ import { createTRPCRouter } from "~/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   chat: chatRouter,
+  chroma: chromaRouter,
   example: exampleRouter
 });
 

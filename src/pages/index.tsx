@@ -11,14 +11,184 @@ import {
   type FormEvent,
   useRef,
   useEffect,
+  ChangeEvent
 } from "react";
 import Image from "next/image";
 import Avatar from '../../public/avatar.jpg';
 import ReactMarkdown from "react-markdown";
+import { Document } from "~/server/api/routers/chroma";
+import { TRPCClientError } from "@trpc/client";
+import { ArrowUpCircleIcon } from '@heroicons/react/24/solid';
+import { Disclosure, Tab, Transition } from '@headlessui/react';
 
 type MessageType = {
   content: string;
   role: "user" | "assistant";
+};
+
+
+const AddDocumentForm: React.FC = () => {
+  const [collectionIds, setCollectionIds] = useState<string[]>(["Create new collection"]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>("Create new collection");
+  const [newCollectionName, setNewCollectionName] = useState<string>("");
+  const [text, setText] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
+  const [tabIndex, setTabIndex] = useState(0);
+
+  const addDocsToCollection = api.chroma.addDocsToCollection.useMutation();
+  const addTextToCollection = api.chroma.addTextToCollection.useMutation();
+  const createCollectionFromDoc = api.chroma.createCollectionFromDoc.useMutation();
+  const createCollectionFromText = api.chroma.createCollectionFromText.useMutation();
+
+  const handleCollectionChange = (event: ChangeEvent<HTMLSelectElement>): void => {
+    setSelectedCollectionId(event.target.value);
+    if (event.target.value === "Create new collection") {
+      setNewCollectionName("");
+    }
+  };
+
+  const handleUpload = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const collectionId = selectedCollectionId === "Create new collection" ? newCollectionName : selectedCollectionId;
+
+    // Prepare documents
+    const documents = [
+      {
+        pageContent: text,
+        metadata: {}
+      },
+    ];
+
+    console.log("Submitted")
+
+    if (selectedCollectionId !== "Create new collection" && file){
+      addDocsToCollection.mutateAsync({
+        collection: collectionId,
+        documents: documents,
+      })
+        .then((response) => {
+          console.log(response);
+        })
+        .catch((error: TRPCClientError<any>) => {
+          console.error("Error uploading document", error);
+        });
+    } else if (selectedCollectionId !== "Create new collection" && text){
+      addTextToCollection.mutateAsync({
+        collection: collectionId,
+        texts: [text],
+        metadatas: [{}]
+      })
+        .then((response) => {
+          console.log(response);
+        })
+        .catch((error: TRPCClientError<any>) => {
+          console.error("Error uploading document", error);
+        });
+    } else if (selectedCollectionId === "Create new collection" && text){
+      console.log("Creating collection from text")
+      createCollectionFromText.mutateAsync({
+        collection: collectionId,
+        texts: [text],
+        ids: [{id: 1}]
+      })
+        .then((response) => {
+          console.log(response);
+        })
+        .catch((error: TRPCClientError<any>) => {
+          console.error("Error creating collection from document", error);
+        });
+    } 
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    const selectedFile = event.target.files && event.target.files.length > 0 ? event.target.files[0] : null;
+    setFile((selectedFile as File | null));
+  };
+  
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <form className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4" onSubmit={handleUpload}>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="collectionId">
+            Collection ID
+          </label>
+          <select
+            id="collectionId"
+            value={selectedCollectionId}
+            onChange={handleCollectionChange}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          >
+            {collectionIds.map((id) => (
+              <option key={id} value={id}>{id}</option>
+            ))}
+          </select>
+        </div>
+        {selectedCollectionId === "Create new collection" && (
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="newCollectionName">
+              New Collection Name
+            </label>
+            <input
+              id="newCollectionName"
+              type="text"
+              value={newCollectionName}
+              onChange={(e) => setNewCollectionName(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </div>
+        )}
+
+        <Tab.Group selectedIndex={tabIndex} onChange={setTabIndex}>
+          <Tab.List className="flex p-1 space-x-1 bg-blue-900 rounded-xl">
+            <Tab className={`w-full py-2.5 text-sm leading-5 font-medium rounded-lg
+              focus:outline-none focus:ring-2 ring-offset-2 ring-offset-blue-400 ring-white ring-opacity-60 
+              ${tabIndex === 0 ? 'bg-white text-blue-700' : 'text-white'}`}>
+              Enter Text
+            </Tab>
+            <Tab className={`w-full py-2.5 text-sm leading-5 font-medium rounded-lg 
+              focus:outline-none focus:ring-2 ring-offset-2 ring-offset-blue-400 ring-white ring-opacity-60
+              ${tabIndex === 1 ? 'bg-white text-blue-700' : 'text-white'}`}>
+              Upload Document
+            </Tab>
+          </Tab.List>
+
+          <Tab.Panel className="mt-2">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="text">
+              Text
+            </label>
+            <textarea
+              id="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            />
+          </Tab.Panel>
+
+          <Tab.Panel className="mt-2">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="file">
+              Upload Document
+            </label>
+            <input
+              id="file"
+              type="file"
+              onChange={handleFileChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </Tab.Panel>
+        </Tab.Group>
+
+        <div className="flex items-center justify-between mt-4">
+          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+            <ArrowUpCircleIcon className="h-5 w-5 mr-2 inline-block" />
+            Submit
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 };
 
 const MessagesContext = createContext<Array<MessageType>>(
@@ -283,7 +453,7 @@ const Home: NextPage = () => {
         <title>Athena.ai</title>
         <meta name="description" content="Athena.ai - your personal knowledge assistant." />
       </Head>
-      <main className="mx-auto flex h-screen max-w-3xl flex-col bg-white p-5 md:px-0">
+      <main className="mx-auto flex h-screen flex-col bg-white p-5 md:px-0">
         <div className="flex-none">
           <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl md:text-4xl">
             Athena.ai
@@ -292,25 +462,33 @@ const Home: NextPage = () => {
             Welcome to Athena.ai, your personal knowledge assistant.
           </p>
         </div>
-        <ProcessingContext.Provider value={processing}>
-          <SetProcessingContext.Provider value={setProcessing}>
-            <MessagesContext.Provider value={messages}>
-              <SetMessagesContext.Provider value={setMessages}>
-                <SetTokenCountContext.Provider value={setTokenCount}>
-                  <TokenCountContext.Provider value={tokenCount}>
-                    <ChatMessages className="mt-5 flex-1 overflow-y-auto" />
-                    {tokenCount < 500 && (
-                      <PushChatMessageForm className="flex-none" />
-                    )}
-                  </TokenCountContext.Provider>
-                </SetTokenCountContext.Provider>
-              </SetMessagesContext.Provider>
-            </MessagesContext.Provider>
-          </SetProcessingContext.Provider>
-        </ProcessingContext.Provider>
+        <div className="flex flex-row flex-1 mt-5 overflow-y-auto">
+          <div className="w-1/4 p-4">
+            <AddDocumentForm />
+          </div>
+          <div className="w-3/4 p-4 flex flex-col">
+            <ProcessingContext.Provider value={processing}>
+              <SetProcessingContext.Provider value={setProcessing}>
+                <MessagesContext.Provider value={messages}>
+                  <SetMessagesContext.Provider value={setMessages}>
+                    <SetTokenCountContext.Provider value={setTokenCount}>
+                      <TokenCountContext.Provider value={tokenCount}>
+                        <ChatMessages className="flex-grow overflow-y-auto" />
+                        {tokenCount < 500 && (
+                          <PushChatMessageForm className="flex-none" />
+                        )}
+                      </TokenCountContext.Provider>
+                    </SetTokenCountContext.Provider>
+                  </SetMessagesContext.Provider>
+                </MessagesContext.Provider>
+              </SetProcessingContext.Provider>
+            </ProcessingContext.Provider>
+          </div>
+        </div>
       </main>
     </>
   );
+  
 };
 
 export default Home;

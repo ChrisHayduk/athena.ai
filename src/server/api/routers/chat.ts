@@ -3,7 +3,8 @@ import {
   createTRPCRouter,
   publicProcedure,
   protectedProcedure,
-} from "~/server/api/trpc";import { Configuration, OpenAIApi } from "openai";
+} from "~/server/api/trpc";
+import { Configuration, OpenAIApi } from "openai";
 
 const openai = new OpenAIApi(
   new Configuration({
