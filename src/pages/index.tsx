@@ -51,6 +51,10 @@ const AddDocumentForm: React.FC = () => {
     event.preventDefault();
     const collectionId = selectedCollectionId === "Create new collection" ? newCollectionName : selectedCollectionId;
 
+    if (collectionIds.indexOf(collectionId) === -1){
+      setCollectionIds([...collectionIds, collectionId]);
+    }
+    
     // Prepare documents
     const documents = [
       {
@@ -210,6 +214,16 @@ const PushChatMessageForm: FC<React.HTMLAttributes<HTMLFormElement>> = ({
 }) => {
   const [message, setMessage] = useState<string>("");
   const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [similarText, setSimilarText] = useState<string>("");
+  const [queryKey, setQueryKey] = useState<number>(0);  // add this state variable
+
+  
+  const textQuery = api.chroma.queryCollection.useQuery(
+    {collection: 'Quantitative_Easing', text: message, similarDocs: 1},
+    {refetchOnWindowFocus: false, enabled: false}
+  );
+
+  
 
   const messages = useContext(MessagesContext);
   const setMessages = useContext(SetMessagesContext);
@@ -229,6 +243,17 @@ const PushChatMessageForm: FC<React.HTMLAttributes<HTMLFormElement>> = ({
   const handleSubmit = async () => {
     const messagesProxy = messages;
 
+    await textQuery.refetch();
+
+    console.log(textQuery);
+    console.log(textQuery.isSuccess);
+    // check if data has been fetched
+    if (textQuery.isSuccess) {
+      setSimilarText(textQuery.data?.pageContents.join('\n') ?? "");
+      console.log(textQuery);
+      console.log(textQuery.data?.pageContents.join('\n') ?? "");
+    }
+    
     if (
       message.length > minLength &&
       message.length <= maxLength &&
@@ -260,7 +285,7 @@ const PushChatMessageForm: FC<React.HTMLAttributes<HTMLFormElement>> = ({
     }, 750);
 
     await sendChatMessage
-      .mutateAsync({ messages: messagesProxy })
+      .mutateAsync({ messages: messagesProxy, context: textQuery.data?.pageContents.join('\n') ?? "" })
       .then((response) => {
         if (response) {
           messagesProxy.push(response.message as MessageType);

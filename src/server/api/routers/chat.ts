@@ -47,11 +47,18 @@ export const chatRouter = createTRPCRouter({
           z.object({
             role: z.enum(["user", "assistant"]),
             content: z.string(),
-          })
-        ),
+          })),
+        context: z.string()
       })
     )
     .mutation(async (req) => {
+      const messages = [...req.input.messages];
+
+      // Add context to the last message's content
+      if (messages[messages.length - 1] && messages[messages.length - 1]?.content) messages[messages.length - 1]!.content += "\nContext: " + req.input.context;
+      
+      console.log(messages);
+      
       const response = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: [
@@ -59,7 +66,7 @@ export const chatRouter = createTRPCRouter({
             role: "system",
             content: configPrompt,
           },
-          ...req.input.messages,
+          ...messages
         ],
       });
 
