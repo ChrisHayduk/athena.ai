@@ -244,7 +244,7 @@ const PushChatMessageForm: FC<React.HTMLAttributes<HTMLFormElement>> = ({
     const messagesProxy = messages;
 
     await textQuery.refetch();
-
+    
     console.log(textQuery);
     console.log(textQuery.isSuccess);
     // check if data has been fetched
