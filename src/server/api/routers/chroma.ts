@@ -36,7 +36,7 @@ export class Document<
   }
 }
 
-const client_url = "http://" + process.env.CHROMA_SERVER_HOST + ":" + process.env.CHROMA_SERVER_HTTP_PORT;
+const client_url = "http://" + (process.env.CHROMA_SERVER_HOST || "localhost") + ":" + (process.env.CHROMA_SERVER_HTTP_PORT || "8000");
 
 console.log(client_url);
 
@@ -60,7 +60,7 @@ export const chromaRouter = createTRPCRouter({
 
               
         const pageContents = response.map(document => document.pageContent);
-        const documentIds = response.filter(document => document.metadata.id).map(document => document.metadata.id);
+        const documentIds = response.filter(document => document.metadata.id).map(document => document.metadata.id as string);
     
         return {
           pageContents: pageContents,
