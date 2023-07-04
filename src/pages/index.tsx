@@ -243,15 +243,15 @@ const PushChatMessageForm: FC<React.HTMLAttributes<HTMLFormElement>> = ({
   const handleSubmit = async () => {
     const messagesProxy = messages;
 
-    await textQuery.refetch();
+    const result = await textQuery.refetch();
     
-    console.log(textQuery);
-    console.log(textQuery.isSuccess);
+    console.log(result);
+    console.log(result.isSuccess);
     // check if data has been fetched
-    if (textQuery.isSuccess) {
-      setSimilarText(textQuery.data?.pageContents.join('\n') ?? "");
-      console.log(textQuery);
-      console.log(textQuery.data?.pageContents.join('\n') ?? "");
+    if (result.isSuccess) {
+      setSimilarText(result.data?.pageContents.join('\n') ?? "");
+      console.log(result);
+      console.log(result.data?.pageContents.join('\n') ?? "");
     }
     
     if (
@@ -285,7 +285,7 @@ const PushChatMessageForm: FC<React.HTMLAttributes<HTMLFormElement>> = ({
     }, 750);
 
     await sendChatMessage
-      .mutateAsync({ messages: messagesProxy, context: textQuery.data?.pageContents.join('\n') ?? "" })
+      .mutateAsync({ messages: messagesProxy, context: result.data?.pageContents.join('\n') ?? "" })
       .then((response) => {
         if (response) {
           messagesProxy.push(response.message as MessageType);
@@ -499,9 +499,7 @@ const Home: NextPage = () => {
                     <SetTokenCountContext.Provider value={setTokenCount}>
                       <TokenCountContext.Provider value={tokenCount}>
                         <ChatMessages className="flex-grow overflow-y-auto" />
-                        {tokenCount < 500 && (
-                          <PushChatMessageForm className="flex-none" />
-                        )}
+                        <PushChatMessageForm className="flex-none" />
                       </TokenCountContext.Provider>
                     </SetTokenCountContext.Provider>
                   </SetMessagesContext.Provider>

@@ -36,6 +36,9 @@ export class Document<
   }
 }
 
+const client_url = "http://" + process.env.CHROMA_SERVER_HOST + ":" + process.env.CHROMA_SERVER_HTTP_PORT;
+
+console.log(client_url);
 
 export const chromaRouter = createTRPCRouter({
     queryCollection: publicProcedure
@@ -48,7 +51,9 @@ export const chromaRouter = createTRPCRouter({
         
         const vectorStore = await Chroma.fromExistingCollection(
                 new OpenAIEmbeddings(),
-                { collectionName: req.input.collection }
+                { collectionName: req.input.collection,
+                  url: client_url
+                }
         );
 
         const response = await vectorStore.similaritySearch(req.input.text, req.input.similarDocs);
@@ -77,6 +82,7 @@ export const chromaRouter = createTRPCRouter({
         // Create vector store and index the docs
         const vectorStore = await Chroma.fromDocuments(docs, new OpenAIEmbeddings(), {
           collectionName: req.input.collection,
+          url: client_url
         });
 
       return (vectorStore)
@@ -97,6 +103,7 @@ export const chromaRouter = createTRPCRouter({
             new OpenAIEmbeddings(),
             {
               collectionName: req.input.collection,
+              url: client_url
             }
           );
           
@@ -117,7 +124,9 @@ export const chromaRouter = createTRPCRouter({
     .mutation(async (req) => {
         const vectorStore = await Chroma.fromExistingCollection(
             new OpenAIEmbeddings(),
-            { collectionName: req.input.collection }
+            { collectionName: req.input.collection,
+              url: client_url
+            }
         );
 
         await vectorStore.addDocuments(req.input.documents);
@@ -142,7 +151,9 @@ export const chromaRouter = createTRPCRouter({
 
         const vectorStore = await Chroma.fromExistingCollection(
             new OpenAIEmbeddings(),
-            { collectionName: req.input.collection }
+            { collectionName: req.input.collection,
+              url: client_url
+            }
         );
 
         await vectorStore.addDocuments(documents);
