@@ -439,12 +439,12 @@ function AuthShowcase() {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4">
-      <p className="text-center text-2xl text-white">
+      <p className="text-center text-2xl text-black">
         {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
         {secretMessage && <span> - {secretMessage}</span>}
       </p>
       <button
-        className="rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
+        className="rounded-full bg-white/10 px-10 py-3 font-semibold text-black no-underline transition hover:bg-white/20"
         onClick={sessionData ? () => void signOut() : () => void signIn()}
       >
         {sessionData ? "Sign out" : "Sign in"}
@@ -479,13 +479,16 @@ const Home: NextPage = () => {
         <meta name="description" content="Athena.ai - your personal knowledge assistant." />
       </Head>
       <main className="mx-auto flex h-screen flex-col bg-white p-5 md:px-0">
-        <div className="flex-none">
-          <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl md:text-4xl">
-            Athena.ai
-          </h1>
-          <p className="text-sm text-neutral-800 sm:text-base">
-            Welcome to Athena.ai, your personal knowledge assistant.
-          </p>
+      <div className="flex justify-between items-center">  {/* Add this line */}
+          <div className="flex-none">
+            <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl md:text-4xl">
+              Athena.ai
+            </h1>
+            <p className="text-sm text-neutral-800 sm:text-base">
+              Welcome to Athena.ai, your personal knowledge assistant.
+            </p>
+          </div>
+          <AuthShowcase /> {/* Move AuthShowcase component here */}
         </div>
         <div className="flex flex-row flex-1 mt-5 overflow-y-auto">
           <div className="w-1/4 p-4">
