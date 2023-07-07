@@ -1,18 +1,20 @@
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession, SessionProvider } from "next-auth/react";
 import Head from "next/head";
 import Link from "next/link";
 import { api } from "~/utils/api";
 import { type NextPage } from "next";
 import {
   createContext,
-  useState,
   useContext,
   type FC,
   type FormEvent,
   useRef,
   useEffect,
+  useState,
+  ReactNode,
   ChangeEvent
 } from "react";
+import { Button, Card, Typography } from '@mui/material';
 import Image from "next/image";
 import Avatar from '../../public/avatar.jpg';
 import ReactMarkdown from "react-markdown";
@@ -429,13 +431,52 @@ const ChatMessages: FC<React.HTMLAttributes<HTMLUListElement>> = ({
   );
 };
 
+type OpenAIContextType = {
+  openAIKey: string | null,
+  setOpenAIKey: (value: string | null) => void
+}
+
+type ProviderProps = {
+  children: ReactNode
+}
+
+const OpenAIContext = createContext<OpenAIContextType | undefined>(undefined);
+
+const OpenAIProvider: FC<ProviderProps> = ({ children }) => {
+  const [openAIKey, setOpenAIKey] = useState<string | null>(null);
+
+  return (
+    <OpenAIContext.Provider value={{ openAIKey, setOpenAIKey }}>
+      {children}
+    </OpenAIContext.Provider>
+  );
+}
+
+function useOpenAIKey(): OpenAIContextType {
+  const context = useContext(OpenAIContext);
+  if (context === undefined) {
+    throw new Error('useOpenAIKey must be used within a OpenAIProvider')
+  }
+  return context;
+}
+
+
 function AuthShowcase() {
+  const { openAIKey, setOpenAIKey } = useOpenAIKey();
   const { data: sessionData } = useSession();
 
   const { data: secretMessage } = api.example.getSecretMessage.useQuery(
     undefined, // no input
     { enabled: sessionData?.user !== undefined }
   );
+
+  const handleSignIn = () => {
+    const key = prompt("Please enter your OpenAI API key:");
+    if (key) {
+      setOpenAIKey(key);
+      signIn();
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center gap-4">
@@ -445,7 +486,7 @@ function AuthShowcase() {
       </p>
       <button
         className="rounded-full bg-white/10 px-10 py-3 font-semibold text-black no-underline transition hover:bg-white/20"
-        onClick={sessionData ? () => void signOut() : () => void signIn()}
+        onClick={sessionData ? () => void signOut() : handleSignIn} // Here, instead of directly calling signIn, we now call handleSignIn
       >
         {sessionData ? "Sign out" : "Sign in"}
       </button>
@@ -472,8 +513,14 @@ const Home: NextPage = () => {
     }
   }, [welcome.data]);
 
-  return (
-    <>
+  const { data: session } = useSession();
+
+  if (session) {
+    return (
+      <>
+      <OpenAIProvider>
+        <p>Welcome, {session.user.name}!</p>
+        <button onClick={() => signOut()}>Sign out</button>
       <Head>
         <title>Athena.ai</title>
         <meta name="description" content="Athena.ai - your personal knowledge assistant." />
@@ -512,9 +559,27 @@ const Home: NextPage = () => {
           </div>
         </div>
       </main>
+    </OpenAIProvider>
     </>
-  );
-  
+  )
+  } else {
+    return (
+      <>
+        <OpenAIProvider> {/* Wrap your login form with the OpenAIProvider */}
+          <Head>
+            <title>Login | Athena.ai</title>
+          </Head>
+          <div className="flex items-center justify-center h-screen bg-gray-100">
+            <Card className="p-10">
+              <Typography variant="h4" className="mb-6">Welcome to Athena.ai</Typography>
+              <Typography variant="subtitle1" className="mb-10">Please sign in to continue</Typography>
+              <Button variant="contained" color="primary" style={{ color: "black" }} onClick={() => signIn()}>Sign in</Button>
+            </Card>
+          </div>
+        </OpenAIProvider>
+      </>
+    )
+  }
 };
 
 export default Home;

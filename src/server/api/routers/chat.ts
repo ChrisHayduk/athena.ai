@@ -25,7 +25,7 @@ const configPrompt =
 export const chatRouter = createTRPCRouter({
     welcome: publicProcedure.input(z.object({})).query(async () => {
         const response = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
+          model: "gpt-4",
           messages: [
             {
               role: "system",
@@ -60,7 +60,7 @@ export const chatRouter = createTRPCRouter({
       console.log(messages);
       
       const response = await openai.createChatCompletion({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4",
         messages: [
           {
             role: "system",
