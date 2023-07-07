@@ -460,7 +460,6 @@ function useOpenAIKey(): OpenAIContextType {
   return context;
 }
 
-
 function AuthShowcase() {
   const { openAIKey, setOpenAIKey } = useOpenAIKey();
   const { data: sessionData } = useSession();
@@ -471,12 +470,14 @@ function AuthShowcase() {
   );
 
   const handleSignIn = () => {
-    const key = prompt("Please enter your OpenAI API key:");
-    if (key) {
-      setOpenAIKey(key);
-      signIn();
+    if (openAIKey) {
+      setOpenAIKey(openAIKey);
+      signIn().catch((error) => {
+        // Handle the error here, either show a message to the user, log it, etc.
+        console.error('SignIn Error:', error);
+      });
     }
-  };
+  }
 
   return (
     <div className="flex flex-col items-center justify-center gap-4">
@@ -484,10 +485,20 @@ function AuthShowcase() {
         {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
         {secretMessage && <span> - {secretMessage}</span>}
       </p>
+
+      {!sessionData && (
+        <input
+          type="text"
+          placeholder="Enter OpenAI API key"
+          className="border rounded py-2 px-3 text-grey-darker mb-3"
+          onChange={(e) => setOpenAIKey(e.target.value)}
+        />
+      )}
+
       <button
         className="rounded-full bg-white/10 px-10 py-3 font-semibold text-black no-underline transition hover:bg-white/20"
-        onClick={sessionData ? () => void signOut() : handleSignIn} // Here, instead of directly calling signIn, we now call handleSignIn
-      >
+        onClick={sessionData ? () => signOut().catch(error => console.error('SignOut Error:', error)) : handleSignIn}
+        >
         {sessionData ? "Sign out" : "Sign in"}
       </button>
     </div>
@@ -517,68 +528,72 @@ const Home: NextPage = () => {
 
   if (session) {
     return (
-      <>
       <OpenAIProvider>
-        <p>Welcome, {session.user.name}!</p>
-        <button onClick={() => signOut()}>Sign out</button>
-      <Head>
-        <title>Athena.ai</title>
-        <meta name="description" content="Athena.ai - your personal knowledge assistant." />
-      </Head>
-      <main className="mx-auto flex h-screen flex-col bg-white p-5 md:px-0">
-      <div className="flex justify-between items-center">  {/* Add this line */}
-          <div className="flex-none">
-            <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl md:text-4xl">
-              Athena.ai
-            </h1>
-            <p className="text-sm text-neutral-800 sm:text-base">
-              Welcome to Athena.ai, your personal knowledge assistant.
-            </p>
+        <Head>
+          <title>Athena.ai</title>
+          <meta name="description" content="Athena.ai - your personal knowledge assistant." />
+        </Head>
+
+        <main className="mx-auto flex h-screen flex-col bg-white p-5 md:px-0">
+          <div className="flex justify-between items-center">
+            <div className="flex-none">
+              <h1 className="text-xl font-bold text-neutral-900 sm:text-2xl md:text-4xl">
+                Athena.ai
+              </h1>
+              <p className="text-sm text-neutral-800 sm:text-base">
+                Welcome to Athena.ai, your personal knowledge assistant.
+              </p>
+            </div>
+            <AuthShowcase />
           </div>
-          <AuthShowcase /> {/* Move AuthShowcase component here */}
-        </div>
-        <div className="flex flex-row flex-1 mt-5 overflow-y-auto">
-          <div className="w-1/4 p-4">
-            <AddDocumentForm />
+
+          <div className="flex flex-row flex-1 mt-5 overflow-y-auto">
+            <div className="w-1/4 p-4">
+              <AddDocumentForm />
+            </div>
+
+            <div className="w-3/4 p-4 flex flex-col">
+              <ProcessingContext.Provider value={processing}>
+                <SetProcessingContext.Provider value={setProcessing}>
+                  <MessagesContext.Provider value={messages}>
+                    <SetMessagesContext.Provider value={setMessages}>
+                      <SetTokenCountContext.Provider value={setTokenCount}>
+                        <TokenCountContext.Provider value={tokenCount}>
+                          <ChatMessages className="flex-grow overflow-y-auto" />
+                          <PushChatMessageForm className="flex-none" />
+                        </TokenCountContext.Provider>
+                      </SetTokenCountContext.Provider>
+                    </SetMessagesContext.Provider>
+                  </MessagesContext.Provider>
+                </SetProcessingContext.Provider>
+              </ProcessingContext.Provider>
+            </div>
           </div>
-          <div className="w-3/4 p-4 flex flex-col">
-            <ProcessingContext.Provider value={processing}>
-              <SetProcessingContext.Provider value={setProcessing}>
-                <MessagesContext.Provider value={messages}>
-                  <SetMessagesContext.Provider value={setMessages}>
-                    <SetTokenCountContext.Provider value={setTokenCount}>
-                      <TokenCountContext.Provider value={tokenCount}>
-                        <ChatMessages className="flex-grow overflow-y-auto" />
-                        <PushChatMessageForm className="flex-none" />
-                      </TokenCountContext.Provider>
-                    </SetTokenCountContext.Provider>
-                  </SetMessagesContext.Provider>
-                </MessagesContext.Provider>
-              </SetProcessingContext.Provider>
-            </ProcessingContext.Provider>
-          </div>
-        </div>
-      </main>
-    </OpenAIProvider>
-    </>
-  )
+        </main>
+      </OpenAIProvider>
+    );
   } else {
     return (
-      <>
-        <OpenAIProvider> {/* Wrap your login form with the OpenAIProvider */}
-          <Head>
-            <title>Login | Athena.ai</title>
-          </Head>
-          <div className="flex items-center justify-center h-screen bg-gray-100">
-            <Card className="p-10">
-              <Typography variant="h4" className="mb-6">Welcome to Athena.ai</Typography>
-              <Typography variant="subtitle1" className="mb-10">Please sign in to continue</Typography>
-              <Button variant="contained" color="primary" style={{ color: "black" }} onClick={() => signIn()}>Sign in</Button>
-            </Card>
-          </div>
-        </OpenAIProvider>
-      </>
-    )
+      <OpenAIProvider>
+        <Head>
+          <title>Login | Athena.ai</title>
+        </Head>
+
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <Card className="p-10">
+            <Typography variant="h4" className="mb-6">
+              Welcome to Athena.ai
+            </Typography>
+
+            <Typography variant="subtitle1" className="mb-10">
+              Please sign in to continue
+            </Typography>
+
+            <AuthShowcase />
+          </Card>
+        </div>
+      </OpenAIProvider>
+    );
   }
 };
 
